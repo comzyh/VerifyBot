@@ -72,8 +72,13 @@ class TelegramBot(Singleton):
                 'cache-control': "no-cache",
             },
         )
-        response = http_client.fetch(request)
-        print (response.body)
+        try:
+            response = http_client.fetch(request)
+        except HTTPError as e:
+            print (e.response.body)
+            raise e
+        else:
+            print (response.body)
 
     @gen.coroutine
     def send_message(self, chat_id, text, reply_to_message_id=None):
@@ -111,8 +116,6 @@ class TelegramBot(Singleton):
         except HTTPError as e:
             print (e.response.body)
             raise e
-        else:
-            pass
         print (response.body)
 
     def on_receive_result(self):
