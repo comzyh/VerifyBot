@@ -3,6 +3,7 @@
 """TelegramBot."""
 import json
 import sys
+import mimetypes
 
 from tornado.httpclient import HTTPClient
 from tornado.httpclient import AsyncHTTPClient
@@ -82,28 +83,27 @@ class TelegramBot(Singleton):
         uploaded as files.
         Return (content_type, body) ready for httplib.HTTP instance
         """
-        BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
-        CRLF = b'\r\n'
-        L = []
+        boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
+        lines = []
         for (key, value) in fields:
-            L.append('--' + BOUNDARY)
-            L.append('Content-Disposition: form-data; name="%s"' % key)
-            L.append('')
-            L.append(value)
+            lines.append('--' + boundary)
+            lines.append('Content-Disposition: form-data; name="%s"' % key)
+            lines.append('')
+            lines.append(value)
         for (key, filename, value, content_type) in files:
-            filename = filename
-            L.append('--' + BOUNDARY)
-            L.append(
+            filename = filename + mimetypes.guess_extension(content_type)
+            lines.append('--' + boundary)
+            lines.append(
                 'Content-Disposition: form-data; name="%s"; filename="%s"' % (
                     key, filename
                 )
             )
-            L.append('Content-Type: %s' % content_type)
-            L.append('')
-            L.append(value)
-        L.append('--' + BOUNDARY + '--')
-        L.append('')
-        body = CRLF.join(map(lambda x: x.encode('utf8') if isinstance(x, str) else x, L))
-        content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+            lines.append('Content-Type: %s' % content_type)
+            lines.append('')
+            lines.append(value)
+        lines.append('--' + boundary + '--')
+        lines.append('')
+        body = b'\r\n'.join(map(lambda x: x.encode('utf8') if isinstance(x, str) else x, lines))
+        content_type = 'multipart/form-data; boundary=%s' % boundary
         return content_type, body
 
