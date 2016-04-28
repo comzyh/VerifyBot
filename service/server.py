@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """MainHandler."""
-import sys
 import tornado.web
+
+from service.tgbot import TelegramBot
 
 
 class MainHandler(tornado.web.RequestHandler):
     """Handler."""
+
+    def initialize(self):
+        self.bot = TelegramBot()
 
     def get(self):
         """get."""
@@ -14,4 +18,6 @@ class MainHandler(tornado.web.RequestHandler):
 
     def post(self):
         """set."""
-        pass
+        print (self.request.body)
+        self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
+
