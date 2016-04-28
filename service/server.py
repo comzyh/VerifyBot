@@ -25,9 +25,11 @@ class MainHandler(RequestHandler):
     @gen.coroutine
     def post(self):
         """set."""
-        print (self.request.body)
-        self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
-
+        logging.info('Captcha received.')
+        self.finish('Captcha received.')
+        response = yield self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
+        logger.debug('Photo Sent.')
+        logger.debug(response.body.decode('utf-8'))
 
 class BotHandler(RequestHandler):
 
