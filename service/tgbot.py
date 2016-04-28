@@ -91,7 +91,7 @@ class TelegramBot(Singleton):
             L.append('')
             L.append(value)
         for (key, filename, value, content_type) in files:
-            filename = filename.encode("utf8")
+            filename = filename
             L.append('--' + BOUNDARY)
             L.append(
                 'Content-Disposition: form-data; name="%s"; filename="%s"' % (
