@@ -5,6 +5,7 @@ import json
 import mimetypes
 import sqlite3
 import logging
+import datetime
 
 
 from tornado import gen
@@ -142,7 +143,7 @@ class TelegramBot(Singleton):
         future = Future()
         self.unfinshed_task[file_id] = future
         try:
-            code = yield gen.with_timeout(timeout, future)
+            code = yield gen.with_timeout(datetime.timedelta(seconds=timeout), future)
         except gen.TimeoutError:
             result = (False, 'TimeoutError')
         else:
