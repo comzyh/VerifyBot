@@ -10,29 +10,16 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
 from tornado.httpclient import HTTPError
 
-
-class _Singleton(type):
-    """ A metaclass that creates a Singleton base class when called. """
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(_Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
-class Singleton(_Singleton('SingletonMeta', (object,), {})):
-    pass
+from service.singleton import Singleton
+from service.config import Config
 
 
 class TelegramBot(Singleton):
     """docstring for TelegramBot"""
 
-    def __init__(self, bot_token=None):
-        if not bot_token:
-            self.token = sys.argv[1]
-        else:
-            self.token = bot_token
+    def __init__(self):
+        config = Config()
+        self.token = config.token
         self.api_url = 'https://api.telegram.org/bot{token}/'.format(token=self.token)
 
     def get_chat_ids(self):
@@ -106,4 +93,3 @@ class TelegramBot(Singleton):
         body = b'\r\n'.join(map(lambda x: x.encode('utf8') if isinstance(x, str) else x, lines))
         content_type = 'multipart/form-data; boundary=%s' % boundary
         return content_type, body
-
