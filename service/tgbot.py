@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """TelegramBot."""
 import json
-import sys
 import mimetypes
+import sqlite3
 
+from tornado import gen
 from tornado.httpclient import HTTPClient
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
@@ -21,9 +22,43 @@ class TelegramBot(Singleton):
         config = Config()
         self.token = config.token
         self.api_url = 'https://api.telegram.org/bot{token}/'.format(token=self.token)
+        self.db = sqlite3.connect(config.db_filename)
+        self.create_db()
+        self.chat_ids = None
+
+    def create_db(self):
+        cu = self.db.cursor()
+        cu.execute('''
+            CREATE TABLE IF NOT EXISTS [tg_subscribe] (
+            [chat_id] INT NOT NULL ON CONFLICT REPLACE UNIQUE);
+            ''')
+        cu.close()
 
     def get_chat_ids(self):
-        return [sys.argv[2]]
+        if not self.chat_ids:
+            self.chat_ids = set()
+            cu = self.db.cursor()
+            cu.execute(
+                "SELECT chat_id FROM tg_subscribe;")
+            rows = cu.fetchall()
+            for chat_id in rows:
+                self.chat_ids.add(chat_id)
+            cu.close()
+        return self.chat_ids
+
+    def subscribe(self, chat_id):
+        if chat_id not in self.chat_ids:
+            self.chat_ids.add(chat_id)
+            cu = self.db
+            cu.execute("REPLACE INTO tg_subscribe (chat_id) VALUES (?);", chat_id)
+            cu.close()
+
+    def unsubscribe(self, chat_id):
+        if chat_id in self.chat_ids:
+            self.chat_ids.remove(chat_id)
+            cu = self.db
+            cu.execute("DELETE FROM tg_subscribe WHERE chat_id = ?;", chat_id)
+            cu.close()
 
     def set_web_hook(self, url):
         api_url = self.api_url + 'setWebhook'
@@ -40,8 +75,29 @@ class TelegramBot(Singleton):
         response = http_client.fetch(request)
         print (response.body)
 
+    @gen.coroutine
+    def send_message(self, chat_id, text, reply_to_message_id=None):
+        url = self.api_url + 'sendMessage'
+        http_client = AsyncHTTPClient()
+        body = {
+            'chat_id': chat_id,
+            'text': text
+        }
+        if reply_to_message_id:
+            body['reply_to_message_id'] = reply_to_message_id
+        request = HTTPRequest(
+            url=url,
+            headers={
+                'content-type': 'application/json'
+            },
+            body=json.dumps(body)
+        )
+        response = yield http_client.fetch(request)
+        raise gen.Return(response)
+
+    @gen.coroutine
     def on_receive_captcha(self, captcha):
-        http_client = HTTPClient()
+        http_client = AsyncHTTPClient()
         url = self.api_url + 'sendPhoto'
         for chat_id in self.get_chat_ids():
             content_type, body = self.encode_multipart_formdata(

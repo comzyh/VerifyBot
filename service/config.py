@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import os
 from service.singleton import Singleton
 
 
@@ -13,6 +14,8 @@ class Config(Singleton):
         self.args = parser.parse_args()
         self.port = self.args.port
         self.token = self.args.token
+        self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.db_filename = os.path.join(self.base_dir, 'verify_bot.db')
         if not self.__check_args():
             parser.print_help()
             sys.exit(1)
