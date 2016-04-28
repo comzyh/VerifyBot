@@ -16,10 +16,10 @@ class TelegramBot(object):
             self.token = sys.argv[1]
         else:
             self.token = bot_token
-        self.api_url = 'https://api.telegram.org/bot{token}/'.format(self.token)
+        self.api_url = 'https://api.telegram.org/bot{token}/'.format(token=self.token)
 
     def set_web_hook(self, url):
-        api_url = self.api + 'setWebhook'
+        api_url = self.api_url + 'setWebhook'
         http_client = HTTPClient()
         request = HTTPRequest(
             url=api_url,
