@@ -12,6 +12,7 @@ from tornado.httpclient import HTTPClient
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
 from tornado.httpclient import HTTPError
+from tornado.concurrent import Future
 
 from service.singleton import Singleton
 from service.config import Config
@@ -29,6 +30,7 @@ class TelegramBot(Singleton):
         self.db = sqlite3.connect(config.db_filename)
         self.create_db()
         self.load_chat_ids()
+        self.unfinshed_task = {}
 
     def create_db(self):
         cu = self.db.cursor()
@@ -112,25 +114,40 @@ class TelegramBot(Singleton):
     def on_receive_captcha(self, captcha):
         http_client = AsyncHTTPClient()
         url = self.api_url + 'sendPhoto'
+        file_id = None
         for chat_id in self.chat_ids:
             logger.debug('on_receive_captcha: chat_id: {0}'.format(chat_id))
-            content_type, body = self.encode_multipart_formdata(
-                fields=[('chat_id', chat_id)],
-                files=[('photo', captcha['filename'], captcha['body'], captcha['content_type'])]
-            )
-        headers = {"Content-Type": content_type, 'content-length': str(len(body))}
-        request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
-        try:
-            response = yield http_client.fetch(request)
-        except HTTPError as e:
-            print (e.response.body)
-            raise e
-        logger.debug(response.body)
-        logger.info('Captcha send successfully.')
-        raise gen.Return(response)
+            if file_id is None:
+                content_type, body = self.encode_multipart_formdata(
+                    fields=[('chat_id', chat_id)],
+                    files=[('photo', captcha['filename'], captcha['body'], captcha['content_type'])]
+                )
+            else:
+                content_type = 'application/json'
+                body = json.dumps({'chat_id': chat_id, 'photo': file_id})
+            headers = {"Content-Type": content_type}
+            request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
+            request = HTTPRequest(url, "POST",)
+            try:
+                response = yield http_client.fetch(request)
+            except HTTPError as e:
+                logger.error(e.response.body)
+                raise e
+            logger.debug(response.body)
+            logger.info('Captcha send successfully.')
+            if file_id is None:
+                result = json.loads(response.body.decode('utf-8'))['result']
+                file_id = result['photo'][0]['file_id']
+                logger.info('file_id: {0}'.format(file_id))
 
-    def on_receive_result(self):
-        pass
+        future = Future()
+        self.unfinshed_task[file_id] = future
+        text = yield future
+        raise gen.Return(text)
+
+    def on_receive_result(self, file_id, text):
+        if file_id in self.unfinshed_task:
+            self.unfinshed_task[file_id].set_result(text)
 
     @classmethod
     def encode_multipart_formdata(cls, fields, files):

@@ -26,10 +26,9 @@ class MainHandler(RequestHandler):
     def post(self):
         """set."""
         logging.info('Captcha received.')
-        self.finish('Captcha received.')
-        response = yield self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
-        logger.debug('Photo Sent.')
-        logger.debug(response.body.decode('utf-8'))
+        code = yield self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
+        self.finish(code)
+
 
 class BotHandler(RequestHandler):
 
@@ -54,3 +53,6 @@ class BotHandler(RequestHandler):
                 yield self.bot.send_message(chat_id, 'Unsubscribe successfully.', message_id)
             else:
                 yield self.bot.send_message(chat_id, 'Unknown command.', message_id)
+        elif 'reply_to_message' in message:  # reply
+            reply_file_id = message['reply_to_message']['photo'][0]['file_id']
+            self.bot.on_receive_result(reply_file_id, text)
