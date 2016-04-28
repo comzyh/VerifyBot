@@ -20,4 +20,3 @@ class MainHandler(tornado.web.RequestHandler):
         """set."""
         print (self.request.body)
         self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
-

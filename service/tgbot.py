@@ -7,6 +7,7 @@ import sys
 from tornado.httpclient import HTTPClient
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
+from tornado.httpclient import HTTPError
 
 
 class _Singleton(type):
@@ -61,7 +62,13 @@ class TelegramBot(Singleton):
             )
         headers = {"Content-Type": content_type, 'content-length': str(len(body))}
         request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
-        response = http_client.fetch(request)
+        try:
+            response = http_client.fetch(request)
+        except HTTPError as e:
+            print (e.response.body)
+            raise e
+        else:
+            pass
         print (response.body)
 
     def on_receive_result(self):
