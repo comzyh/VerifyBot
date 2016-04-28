@@ -20,23 +20,31 @@ def configure_logger():
     if config.args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
-        logger.setLevel(logging.ERROR)
+        logger.setLevel(logging.INFO)
 
 
 def make_app():
     """make_app."""
+    config = Config()
     import tornado.web
+    logger.info('Main url is {0}'.format(config.url_prefix + "/"))
     return tornado.web.Application([
-        (r"/", MainHandler),
-        (r'/update', BotHandler)
+        (config.url_prefix + "/", MainHandler),
+        (config.url_prefix + '/update', BotHandler)
     ])
 
 
 def main():
+    configure_logger()
     config = Config()
     if config.args.set_web_hook:
         bot = TelegramBot()
-        bot.set_web_hook(config.args.set_web_hook)
+        webhook_url = 'https://{hostname}{url_prefix}/update'.format(
+            hostname=config.args.hostname,
+            url_prefix=config.url_prefix,
+        )
+        logger.info('webhook_url: {0}'.format(webhook_url))
+        bot.set_web_hook(webhook_url)
     if config.args.demon:
         app = make_app()
         app.listen(config.port)
