@@ -144,9 +144,11 @@ class TelegramBot(Singleton):
         try:
             code = yield gen.with_timeout(timeout, future)
         except gen.TimeoutError:
-            raise gen.Return((False, 'TimeoutError'))
+            result = (False, 'TimeoutError')
         else:
-            raise gen.Return((True, code))
+            result = (True, code)
+        self.unfinshed_task.pop(file_id)
+        raise gen.Return(result)
 
     def on_receive_result(self, file_id, code):
         if file_id in self.unfinshed_task:
