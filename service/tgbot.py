@@ -44,7 +44,7 @@ class TelegramBot(Singleton):
         cu.execute(
             "SELECT chat_id FROM tg_subscribe;")
         rows = cu.fetchall()
-        for chat_id in rows:
+        for chat_id, in rows:
             self.chat_ids.add(chat_id)
         cu.close()
         return self.chat_ids
@@ -53,16 +53,18 @@ class TelegramBot(Singleton):
         logger.info('subscribe {0}'.format(chat_id))
         if chat_id not in self.chat_ids:
             self.chat_ids.add(chat_id)
-            cu = self.db
+            cu = self.db.cursor()
             cu.execute("REPLACE INTO tg_subscribe (chat_id) VALUES (?);", (chat_id, ))
+            self.db.commit()
             cu.close()
 
     def unsubscribe(self, chat_id):
         logger.info('unsubscribe {0}'.format(chat_id))
         if chat_id in self.chat_ids:
             self.chat_ids.remove(chat_id)
-            cu = self.db
+            cu = self.db.cursor()
             cu.execute("DELETE FROM tg_subscribe WHERE chat_id = ?;", (chat_id, ))
+            self.db.commit()
             cu.close()
 
     def set_web_hook(self, url):
@@ -111,6 +113,7 @@ class TelegramBot(Singleton):
         http_client = AsyncHTTPClient()
         url = self.api_url + 'sendPhoto'
         for chat_id in self.chat_ids:
+            logger.debug('on_receive_captcha: chat_id: {0}'.format(chat_id))
             content_type, body = self.encode_multipart_formdata(
                 fields=[('chat_id', chat_id)],
                 files=[('photo', captcha['filename'], captcha['body'], captcha['content_type'])]
@@ -118,11 +121,13 @@ class TelegramBot(Singleton):
         headers = {"Content-Type": content_type, 'content-length': str(len(body))}
         request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
         try:
-            response = http_client.fetch(request)
+            response = yield http_client.fetch(request)
         except HTTPError as e:
             print (e.response.body)
             raise e
-        print (response.body)
+        logger.debug(response.body)
+        logger.info('Captcha send successfully.')
+        raise gen.Return(response)
 
     def on_receive_result(self):
         pass
@@ -141,7 +146,7 @@ class TelegramBot(Singleton):
             lines.append('--' + boundary)
             lines.append('Content-Disposition: form-data; name="%s"' % key)
             lines.append('')
-            lines.append(value)
+            lines.append(str(value))
         for (key, filename, value, content_type) in files:
             filename = filename + mimetypes.guess_extension(content_type)
             lines.append('--' + boundary)
