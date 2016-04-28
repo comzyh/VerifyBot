@@ -26,7 +26,9 @@ class MainHandler(RequestHandler):
     def post(self):
         """set."""
         logging.info('Captcha received.')
-        code = yield self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
+        status, code = yield self.bot.on_receive_captcha(captcha=self.request.files['captcha'][0])
+        if not status:
+            self.set_status(404)
         self.finish(code)
 
 

@@ -111,7 +111,7 @@ class TelegramBot(Singleton):
         raise gen.Return(response)
 
     @gen.coroutine
-    def on_receive_captcha(self, captcha):
+    def on_receive_captcha(self, captcha, timeout=60):
         http_client = AsyncHTTPClient()
         url = self.api_url + 'sendPhoto'
         file_id = None
@@ -127,7 +127,6 @@ class TelegramBot(Singleton):
                 body = json.dumps({'chat_id': chat_id, 'photo': file_id})
             headers = {"Content-Type": content_type}
             request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
-            request = HTTPRequest(url, "POST",)
             try:
                 response = yield http_client.fetch(request)
             except HTTPError as e:
@@ -142,12 +141,16 @@ class TelegramBot(Singleton):
 
         future = Future()
         self.unfinshed_task[file_id] = future
-        text = yield future
-        raise gen.Return(text)
+        try:
+            code = yield gen.with_timeout(timeout, future)
+        except gen.TimeoutError:
+            raise gen.Return((False, 'TimeoutError'))
+        else:
+            raise gen.Return((True, code))
 
-    def on_receive_result(self, file_id, text):
+    def on_receive_result(self, file_id, code):
         if file_id in self.unfinshed_task:
-            self.unfinshed_task[file_id].set_result(text)
+            self.unfinshed_task[file_id].set_result(code)
 
     @classmethod
     def encode_multipart_formdata(cls, fields, files):
