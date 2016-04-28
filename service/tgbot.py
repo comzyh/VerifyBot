@@ -4,6 +4,8 @@
 import json
 import mimetypes
 import sqlite3
+import logging
+
 
 from tornado import gen
 from tornado.httpclient import HTTPClient
@@ -13,6 +15,8 @@ from tornado.httpclient import HTTPError
 
 from service.singleton import Singleton
 from service.config import Config
+
+logger = logging.getLogger('VerifyBot')
 
 
 class TelegramBot(Singleton):
@@ -46,6 +50,7 @@ class TelegramBot(Singleton):
         return self.chat_ids
 
     def subscribe(self, chat_id):
+        logger.info('subscribe {0}'.format(chat_id))
         if chat_id not in self.chat_ids:
             self.chat_ids.add(chat_id)
             cu = self.db
@@ -53,6 +58,7 @@ class TelegramBot(Singleton):
             cu.close()
 
     def unsubscribe(self, chat_id):
+        logger.info('unsubscribe {0}'.format(chat_id))
         if chat_id in self.chat_ids:
             self.chat_ids.remove(chat_id)
             cu = self.db
