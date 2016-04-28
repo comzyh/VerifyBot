@@ -54,7 +54,7 @@ class TelegramBot(Singleton):
         if chat_id not in self.chat_ids:
             self.chat_ids.add(chat_id)
             cu = self.db
-            cu.execute("REPLACE INTO tg_subscribe (chat_id) VALUES (?);", chat_id)
+            cu.execute("REPLACE INTO tg_subscribe (chat_id) VALUES (?);", (chat_id, ))
             cu.close()
 
     def unsubscribe(self, chat_id):
@@ -62,7 +62,7 @@ class TelegramBot(Singleton):
         if chat_id in self.chat_ids:
             self.chat_ids.remove(chat_id)
             cu = self.db
-            cu.execute("DELETE FROM tg_subscribe WHERE chat_id = ?;", chat_id)
+            cu.execute("DELETE FROM tg_subscribe WHERE chat_id = ?;", (chat_id, ))
             cu.close()
 
     def set_web_hook(self, url):
