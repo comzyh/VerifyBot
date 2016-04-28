@@ -63,3 +63,7 @@ target/
 
 #Vim
 *.swp
+
+#VerifyBot
+verify_bot.db
+

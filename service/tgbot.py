@@ -24,7 +24,7 @@ class TelegramBot(Singleton):
         self.api_url = 'https://api.telegram.org/bot{token}/'.format(token=self.token)
         self.db = sqlite3.connect(config.db_filename)
         self.create_db()
-        self.chat_ids = None
+        self.load_chat_ids()
 
     def create_db(self):
         cu = self.db.cursor()
@@ -34,16 +34,15 @@ class TelegramBot(Singleton):
             ''')
         cu.close()
 
-    def get_chat_ids(self):
-        if not self.chat_ids:
-            self.chat_ids = set()
-            cu = self.db.cursor()
-            cu.execute(
-                "SELECT chat_id FROM tg_subscribe;")
-            rows = cu.fetchall()
-            for chat_id in rows:
-                self.chat_ids.add(chat_id)
-            cu.close()
+    def load_chat_ids(self):
+        self.chat_ids = set()
+        cu = self.db.cursor()
+        cu.execute(
+            "SELECT chat_id FROM tg_subscribe;")
+        rows = cu.fetchall()
+        for chat_id in rows:
+            self.chat_ids.add(chat_id)
+        cu.close()
         return self.chat_ids
 
     def subscribe(self, chat_id):
@@ -92,6 +91,7 @@ class TelegramBot(Singleton):
             body['reply_to_message_id'] = reply_to_message_id
         request = HTTPRequest(
             url=url,
+            method='POST',
             headers={
                 'content-type': 'application/json'
             },
@@ -104,7 +104,7 @@ class TelegramBot(Singleton):
     def on_receive_captcha(self, captcha):
         http_client = AsyncHTTPClient()
         url = self.api_url + 'sendPhoto'
-        for chat_id in self.get_chat_ids():
+        for chat_id in self.chat_ids:
             content_type, body = self.encode_multipart_formdata(
                 fields=[('chat_id', chat_id)],
                 files=[('photo', captcha['filename'], captcha['body'], captcha['content_type'])]

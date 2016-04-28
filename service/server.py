@@ -36,18 +36,19 @@ class BotHandler(RequestHandler):
 
     @gen.coroutine
     def post(self):
-        message = json.loads(self.request.body.decode('utf-8'))
+        logger.debug(self.request.body)
+        message = json.loads(self.request.body.decode('utf-8'))['message']
         message_id = message['message_id']
         chat_id = message['chat']['id']
-        text = message['chat']['text']
+        text = message['text']
         if text.startswith('/'):
             command = text.split('@')[0][1:]
             logger.debug('Got command {command} from chat {chat_id}'.format(command=command, chat_id=chat_id))
             if command == 'subscribe':
                 self.bot.subscribe(chat_id)
-                self.bot.send_message(chat_id, 'Subscribe successfully.', message_id)
+                yield self.bot.send_message(chat_id, 'Subscribe successfully.', message_id)
             elif command == 'unsubscribe':
                 self.bot.subscribe(chat_id)
-                self.bot.send_message(chat_id, 'Unsubscribe successfully.', message_id)
+                yield self.bot.send_message(chat_id, 'Unsubscribe successfully.', message_id)
             else:
-                self.bot.send_message(chat_id, 'Unknown command.', message_id)
+                yield self.bot.send_message(chat_id, 'Unknown command.', message_id)
